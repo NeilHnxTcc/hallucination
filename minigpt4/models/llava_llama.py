@@ -69,6 +69,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         vad: Optional[bool] = None,
         key_position: Optional[dict] =None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -88,7 +89,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             vad=vad,
-            key_position=key_position
+            key_position=key_position,
         )
 
         hidden_states = outputs[0]

@@ -263,7 +263,6 @@ class LLaVa(BaseModel):
                     "image_end": tokens_before.shape[1]+NUM_IMAGE_TOKENS, 
                     "response_start": input_ids.shape[1]+NUM_IMAGE_TOKENS-1,
                 }
-
             output_ids = self.llama_model.generate(
                 input_ids=input_ids,
                 input_ids_cd=input_ids_cd,
@@ -294,6 +293,15 @@ class LLaVa(BaseModel):
                 penalty_weights=penalty_weights,
                 sample_greedy = sample_greedy
             )
+
+        # [    1,   319, 13563,  1546,   263, 12758,  1404,   322,   385, 23116,
+        #  21082, 20255, 29889,   450, 20255,  4076,  8444, 29892, 13173, 29892,
+        #    322,  1248,   568,  6089,   304,   278,  1404, 29915, 29879,  5155,
+        #  29889, 11889, 29901, 29871,  -200, 29871,  1317,   727,   263, 15007,
+        #   3377,   297,   278,  1967, 29973,   319,  1799,  9047, 13566, 29901]
+        import pdb; pdb.set_trace() # to localize the quesition
+
+        
         if return_dict_in_generate == True:
             # input_token_len = input_ids.shape[1]
             # n_diff_input_output = (input_ids != output_ids.sequences[:, :input_token_len]).sum().item()

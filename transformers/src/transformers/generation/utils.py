@@ -1248,7 +1248,6 @@ class GenerationMixin:
                     - [`~generation.BeamSearchEncoderDecoderOutput`],
                     - [`~generation.BeamSampleEncoderDecoderOutput`]
         """
-
         if synced_gpus is None:
             if is_deepspeed_zero3_enabled() and dist.get_world_size() > 1:
                 synced_gpus = True
@@ -1275,7 +1274,7 @@ class GenerationMixin:
             generation_config = self.generation_config
 
         generation_config = copy.deepcopy(generation_config)
-        model_kwargs = generation_config.update(**kwargs)  # All unused kwargs must be model kwargs
+        model_kwargs = generation_config.update(**kwargs)  # All unused kwargs must be model kwargs   :  input_ids_cd;  images_cd;  image
         generation_config.validate()
         # self._validate_model_kwargs(model_kwargs.copy())
 
@@ -1512,7 +1511,6 @@ class GenerationMixin:
                     inputs_tensor, assistant_model_kwargs, model_input_name
                 )
                 model_kwargs["assistant_encoder_outputs"] = assistant_model_kwargs["encoder_outputs"]
-
             # 12. run assisted generate
             return self.assisted_decoding(
                 input_ids,
@@ -1620,6 +1618,7 @@ class GenerationMixin:
             )
 
             # 13. run sample
+            # import pdb; pdb.set_trace()
             return self.sample(
                 input_ids,
                 logits_processor=logits_processor,

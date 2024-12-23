@@ -29,6 +29,7 @@ from minigpt4.tasks import *
 
 from vcd_add_noise import add_diffusion_noise
 from vcd_sample import evolve_vcd_sampling
+from my_sample import evolve_my_sampling
 import logging
 from pathlib import Path
 import warnings
@@ -75,18 +76,18 @@ def parse_args():
     parser.add_argument("--model", type=str, default="llava-1.5", help="model")
     parser.add_argument("--pope-type", type=str, default="", help="model")
     parser.add_argument("--gpu-id", type=int, default=0, help="specify the gpu to load the model.")
-    parser.add_argument("--data-path", type=str, default="", help="data path")
+    parser.add_argument("--data-path", type=str, default="/home/hnx/datasets/val2014", help="data path")
     parser.add_argument("--batch-size", type=int, default=1, help="batch size")
     parser.add_argument("--num_workers", type=int, default=1, help="num workers")
     parser.add_argument("--answers-file", type=str, default="")
     # vision contrastive decoding
     parser.add_argument("--noise_step", type=int, default=500)
-    parser.add_argument("--use-cd", action='store_true', default=True)
+    parser.add_argument("--use-cd", action='store_true', default=False)
     parser.add_argument("--use-icd", action='store_true', default=False)
     parser.add_argument("--use-vcd", action='store_true', default=False)
     parser.add_argument("--sample-greedy", action='store_true',  default=True)
     # fast token merging
-    parser.add_argument("--use-fast-v", action='store_true', default=True)
+    parser.add_argument("--use-fast-v", action='store_true', default=False)
     parser.add_argument("--fast-v-inplace", default=False)
     parser.add_argument("--fast-v-attention-rank", type=int, default=100)
     parser.add_argument("--fast-v-attention-rank-add", type=int, default=100)
@@ -205,8 +206,11 @@ def main():
     setup_seeds(cfg)
     device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
+    # if args.sample and (args.use_icd or args.use_cd or args.use_vcd or args.sample_greedy) == True:
+    #     evolve_vcd_sampling()
+
     if args.sample and (args.use_icd or args.use_cd or args.use_vcd or args.sample_greedy) == True:
-        evolve_vcd_sampling()
+        evolve_my_sampling()
 
     # ========================================
     #             Model Initialization
@@ -215,7 +219,7 @@ def main():
 
     model_config = cfg.model_cfg
     model_config.device_8bit = args.gpu_id
-    model_cls = registry.get_model_class(model_config.arch)
+    model_cls = registry.get_model_class(model_config.arch) # minigpt4.models.llava.LLaVa
     model = model_cls.from_config(model_config).to(device)
     model.eval()
 
@@ -250,7 +254,6 @@ def main():
     # vis_processors.do_normalize = False
     print(vis_processors["eval"].transform)
     print("Done!")
-
     # load pope data
     pope_dataset = POPEDataSet(
         pope_path=args.pope_path, 
@@ -275,7 +278,7 @@ def main():
     print("Start eval...")
     pred_list, pred_list_s, label_list = [], [], []
     # for batch_id, data in tqdm(enumerate(pope_loader), total=len(pope_loader)):
-    for batch_id, data in enumerate(pope_loader):
+    for data in tqdm(pope_loader):
         image = data["image"]
         qu = data["query"]
         label = data["label"]
@@ -298,7 +301,7 @@ def main():
                 prompt_cd = qu[0].split("</Img>")[0] + "</Img>" + ' ' + text_cd + qu[0].split("</Img>")[-1]
         else:
             text_cd = None
-
+        # import pdb; pdb.set_trace()
         if args.use_cd:
             image_cd = image.to(device)
         elif args.use_vcd:
@@ -309,23 +312,24 @@ def main():
 
         with torch.inference_mode():
             with torch.no_grad():
+                # import pdb; pdb.set_trace()
                 out = model.generate(
                     # {"image": norm(image), "prompt":qu},
                     prompt = qu,
                     image = image.half(),
-                    images_cd=(image_cd.half() if image_cd is not None else None),
-                    prompt_cd =(prompt_cd if text_cd is not None else None),
-                    use_nucleus_sampling=args.sample, 
-                    num_beams=args.beam,
+                    images_cd=(image_cd.half() if image_cd is not None else None), # image
+                    prompt_cd =(prompt_cd if text_cd is not None else None), # None,
+                    use_nucleus_sampling=args.sample, # True,
+                    num_beams=args.beam, # 1
                     max_new_tokens=10,
                     output_attentions=True,
-                    opera_decoding=args.opera,
-                    scale_factor=args.scale_factor,
-                    threshold=args.threshold,
-                    num_attn_candidates=args.num_attn_candidates,
-                    penalty_weights=args.penalty_weights,
+                    opera_decoding=args.opera, # false
+                    scale_factor=args.scale_factor, # 50
+                    threshold=args.threshold,  # 15
+                    num_attn_candidates=args.num_attn_candidates, # 5
+                    penalty_weights=args.penalty_weights, # 1
                     use_cache=True,
-                    sample_greedy = args.sample_greedy
+                    sample_greedy = args.sample_greedy # true
                     # cd_alpha = args.cd_alpha,
                     # cd_beta = args.cd_beta,
                     # do_sample=True,
